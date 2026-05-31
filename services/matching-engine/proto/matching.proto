@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package matching;
+
+option go_package = "quantflow/matching-engine/proto";
+
+// SubmitOrderRequest is what FastAPI sends to the Go engine
+// when a trader places an order
+message SubmitOrderRequest {
+  string order_id  = 1;
+  string user_id   = 2;
+  string symbol    = 3;
+  string side      = 4;  // "buy" or "sell"
+  string type      = 5;  // "market" or "limit"
+  double price     = 6;  // ignored for market orders
+  int64  quantity  = 7;
+}
+
+// TradeResult describes one matched trade
+// A single order can produce multiple trades
+// e.g. your buy of 10 shares might match against 3 different sellers
+message TradeResult {
+  string trade_id    = 1;
+  string symbol      = 2;
+  string buy_order_id  = 3;
+  string sell_order_id = 4;
+  string buyer_id    = 5;
+  string seller_id   = 6;
+  double price       = 7;
+  int64  quantity    = 8;
+  string executed_at = 9;
+}
+
+// SubmitOrderResponse is what Go sends back to FastAPI
+message SubmitOrderResponse {
+  string order_id   = 1;
+  string status     = 2;  // "filled", "partial_fill", "new", "cancelled"
+  int64  filled     = 3;  // how many shares were matched
+  int64  remaining  = 4;  // how many shares are still in the book
+  repeated TradeResult trades = 5;  // all trades that resulted
+}
+
+// CancelOrderRequest — FastAPI asks Go to cancel a waiting order
+message CancelOrderRequest {
+  string order_id = 1;
+  string symbol   = 2;
+}
+
+// CancelOrderResponse — Go confirms whether cancel succeeded
+message CancelOrderResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// OrderBookRequest — FastAPI asks for current state of the book
+message OrderBookRequest {
+  string symbol = 1;
+}
+
+// PriceLevel represents one row in the order book
+// e.g. "5 sellers waiting at $150.00"
+message PriceLevel {
+  double price    = 1;
+  int64  quantity = 2;
+}
+
+// OrderBookResponse — the full book snapshot sent to FastAPI
+// FastAPI then pushes this to the frontend via WebSocket
+message OrderBookResponse {
+  string symbol = 1;
+  repeated PriceLevel bids = 2;
+  repeated PriceLevel asks = 3;
+}
+
+// MatchingService defines the three things FastAPI can ask Go to do
+service MatchingService {
+  rpc SubmitOrder  (SubmitOrderRequest)  returns (SubmitOrderResponse);
+  rpc CancelOrder  (CancelOrderRequest)  returns (CancelOrderResponse);
+  rpc GetOrderBook (OrderBookRequest)    returns (OrderBookResponse);
+}
