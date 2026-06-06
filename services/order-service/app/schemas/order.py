@@ -15,10 +15,9 @@ class OrderCreate(BaseModel):
     symbol:   str
     side:     OrderSide
     type:     OrderType
-    price:    Optional[float] = None  # required for limit, ignored for market
+    price:    Optional[float] = None  
     quantity: int
 
-    # validators run automatically before your route code
     @field_validator("quantity")
     def quantity_must_be_positive(cls, v):
         if v <= 0:
@@ -33,9 +32,8 @@ class OrderCreate(BaseModel):
 
     @field_validator("symbol")
     def symbol_must_be_uppercase(cls, v):
-        return v.upper()  # always store symbols as uppercase
+        return v.upper()  
 
-# what the API sends back after placing an order
 class OrderResponse(BaseModel):
     id:        str
     user_id:   str
