@@ -6,44 +6,37 @@ from app.core.database import Base
 class Position(Base):
     """
     one row per user per symbol
-    e.g. user_001 holding AAPL is one row
-         user_001 holding TSLA is another row
+    tracks how many shares the user holds and at what average price
 
-    this gets updated every time a trade executes
+    example rows:
+    user_abc | AAPL | qty=10 | avg=150.0 | realised_pnl=0
+    user_abc | TSLA | qty=5  | avg=220.0 | realised_pnl=80.5
+    user_xyz | AAPL | qty=20 | avg=148.0 | realised_pnl=200.0
     """
     __tablename__ = "positions"
 
-    id         = Column(String(36), primary_key=True)
-    user_id    = Column(String(36), nullable=False, index=True)
-    symbol     = Column(String(10), nullable=False, index=True)
-
-    # how many shares currently held
-    # negative means short position (sold shares you don't own)
-    quantity   = Column(Integer, nullable=False, default=0)
-
-    # weighted average price paid for current shares
-    # used to calculate unrealised P&L
-    avg_price  = Column(Float, nullable=False, default=0.0)
-
-    # total profit locked in from closed trades
-    realised_pnl = Column(Float, nullable=False, default=0.0)
-
-    updated_at = Column(DateTime, server_default=func.now(),
-                       onupdate=func.now())
+    id           = Column(String(36), primary_key=True)
+    user_id      = Column(String(36), nullable=False, index=True)
+    symbol       = Column(String(10), nullable=False, index=True)
+    quantity     = Column(Integer, nullable=False, default=0)
+    avg_price    = Column(Float,   nullable=False, default=0.0)
+    realised_pnl = Column(Float,   nullable=False, default=0.0)
+    updated_at   = Column(DateTime, server_default=func.now(),
+                         onupdate=func.now())
 
 
-class Trade(Base):
+class TradeHistory(Base):
     """
-    permanent record of every trade
-    stored here for P&L history and reporting
-    separate from the orders table in order-service
+    immutable record of every trade
+    never updated — only inserted
+    used for trade history display and P&L reporting
     """
     __tablename__ = "trade_history"
 
     id           = Column(String(36), primary_key=True)
     user_id      = Column(String(36), nullable=False, index=True)
     symbol       = Column(String(10), nullable=False, index=True)
-    side         = Column(String(10), nullable=False)  # buy or sell
+    side         = Column(String(10), nullable=False)
     price        = Column(Float,      nullable=False)
     quantity     = Column(Integer,    nullable=False)
     realised_pnl = Column(Float,      nullable=False, default=0.0)

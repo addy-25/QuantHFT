@@ -1,9 +1,7 @@
-import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from app.core.database import get_db
-from app.models.position import Position, Trade
+from app.models.position import Position, TradeHistory
 
 router = APIRouter()
 
@@ -12,26 +10,23 @@ router = APIRouter()
 def get_portfolio(user_id: str, db: Session = Depends(get_db)):
     """
     returns all open positions for a user
-    called by the frontend to display the positions table
+    called by the frontend to show the positions table
     """
     positions = db.query(Position).filter(
         Position.user_id == user_id,
-        Position.quantity > 0  # only show positions with shares
+        Position.quantity > 0
     ).all()
-
-    if not positions:
-        return {"user_id": user_id, "positions": [], "total_realised_pnl": 0.0}
 
     total_realised = sum(p.realised_pnl for p in positions)
 
     return {
-        "user_id": user_id,
+        "user_id":  user_id,
         "positions": [
             {
-                "symbol":        p.symbol,
-                "quantity":      p.quantity,
-                "avg_price":     round(p.avg_price, 2),
-                "realised_pnl":  round(p.realised_pnl, 2),
+                "symbol":       p.symbol,
+                "quantity":     p.quantity,
+                "avg_price":    round(p.avg_price, 2),
+                "realised_pnl": round(p.realised_pnl, 2),
             }
             for p in positions
         ],
@@ -47,12 +42,12 @@ def get_trade_history(
 ):
     """
     returns recent trade history for a user
-    most recent trades first
+    most recent first
     """
-    trades = db.query(Trade).filter(
-        Trade.user_id == user_id
+    trades = db.query(TradeHistory).filter(
+        TradeHistory.user_id == user_id
     ).order_by(
-        Trade.created_at.desc()
+        TradeHistory.created_at.desc()
     ).limit(limit).all()
 
     return {
@@ -69,4 +64,33 @@ def get_trade_history(
             }
             for t in trades
         ]
+    }
+
+
+@router.get("/portfolio/{user_id}/summary")
+def get_summary(user_id: str, db: Session = Depends(get_db)):
+    """
+    high level summary — total positions, total realised P&L
+    used for the dashboard header stats
+    """
+    positions = db.query(Position).filter(
+        Position.user_id == user_id,
+        Position.quantity > 0
+    ).all()
+
+    trade_count = db.query(TradeHistory).filter(
+        TradeHistory.user_id == user_id
+    ).count()
+
+    total_realised = sum(p.realised_pnl for p in positions)
+    total_position_value = sum(
+        p.quantity * p.avg_price for p in positions
+    )
+
+    return {
+        "user_id":             user_id,
+        "open_positions":      len(positions),
+        "total_position_value": round(total_position_value, 2),
+        "total_realised_pnl":  round(total_realised, 2),
+        "total_trades":        trade_count,
     }

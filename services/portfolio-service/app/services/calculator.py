@@ -6,37 +6,37 @@ def calculate_new_position(
     side: str,
 ) -> tuple[int, float, float]:
     """
-    calculates the new position after a trade executes
+    calculates updated position after a trade
 
-    returns: (new_quantity, new_avg_price, realised_pnl)
+    returns: (new_quantity, new_avg_price, realised_pnl_from_this_trade)
 
-    example — buying:
-        current: 10 shares @ $150 avg
+    BUY example:
+        before:  10 shares @ avg $150
         trade:   buy 5 @ $160
-        result:  15 shares @ $153.33 avg, $0 realised pnl
+        after:   15 shares @ avg $153.33
+        formula: (10×150 + 5×160) / 15 = $153.33
+        realised pnl: $0 (buying doesn't lock in profit)
 
-    example — selling:
-        current: 10 shares @ $150 avg
+    SELL example:
+        before:  10 shares @ avg $150
         trade:   sell 4 @ $170
-        result:  6 shares @ $150 avg, $80 realised pnl
+        after:   6 shares @ avg $150 (unchanged)
+        realised pnl: 4 × ($170 - $150) = $80
     """
     realised_pnl = 0.0
 
     if side == "buy":
-        # weighted average calculation
-        # (old_qty × old_avg + trade_qty × trade_price) / new_qty
+        # weighted average price calculation
         total_cost   = (current_qty * current_avg) + (trade_qty * trade_price)
         new_quantity = current_qty + trade_qty
         new_avg      = total_cost / new_quantity if new_quantity > 0 else 0.0
 
     else:  # sell
-        # selling locks in profit or loss
-        # realised = qty_sold × (sell_price - avg_cost)
+        # selling realises profit or loss
         realised_pnl = trade_qty * (trade_price - current_avg)
         new_quantity = current_qty - trade_qty
-
-        # avg price doesn't change when selling
-        # you're just reducing the position size
+        # avg price stays the same when you sell
+        # you're just reducing the size of the position
         new_avg = current_avg if new_quantity > 0 else 0.0
 
     return new_quantity, new_avg, realised_pnl
@@ -48,8 +48,7 @@ def calculate_unrealised_pnl(
     current_price: float,
 ) -> float:
     """
-    unrealised P&L = how much you'd make if you sold right now
-    positive = profitable position
-    negative = losing position
+    how much you'd make if you sold your entire position right now
+    positive = profit, negative = loss
     """
     return quantity * (current_price - avg_price)
