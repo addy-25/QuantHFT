@@ -111,6 +111,56 @@ async def place_order(
     return db_order
 
 
+@router.get("/alpaca/account")
+async def alpaca_account(current_user: User = Depends(get_current_user)):
+    """Verify the Alpaca paper connection and show the balance."""
+    if not settings.alpaca_enabled:
+        raise HTTPException(status_code=400, detail="Alpaca live trading is disabled")
+
+    from app.core.alpaca import get_account_summary
+    try:
+        return get_account_summary()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Alpaca connection failed: {e}")
+
+
+@router.post("/orders/live")
+async def place_live_order(
+    order_data: OrderCreate,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Route an order to Alpaca's paper account instead of the internal engine.
+    This is the "buy real shares" path — real prices, fake money.
+    """
+    if not settings.alpaca_enabled:
+        raise HTTPException(status_code=400, detail="Alpaca live trading is disabled")
+
+    from app.core.alpaca import submit_to_alpaca
+    try:
+        o = submit_to_alpaca(
+            symbol     = order_data.symbol,
+            side       = order_data.side.value,
+            qty        = order_data.quantity,
+            order_type = order_data.type.value,
+            price      = order_data.price,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Alpaca rejected order: {e}")
+
+    val = lambda v: v.value if hasattr(v, "value") else str(v)
+    return {
+        "venue":           "alpaca-paper",
+        "alpaca_order_id": str(o.id),
+        "symbol":          o.symbol,
+        "side":            val(o.side),
+        "qty":             str(o.qty),
+        "type":            val(o.order_type),
+        "status":          val(o.status),
+        "submitted_at":    str(o.submitted_at),
+    }
+
+
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(
     order_id: str,

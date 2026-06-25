@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 60
     kafka_bootstrap_servers: str = "localhost:9092"
 
+    # Alpaca paper-trading integration (the "Live" venue)
+    # keys are injected from docker-compose -> root .env
+    # if keys are blank the simulated exchange still works unchanged
+    alpaca_enabled:    bool = False
+    alpaca_api_key:    str  = ""
+    alpaca_secret_key: str  = ""
+    alpaca_paper:      bool = True
+
     model_config = {
         "env_file": str(BASE_DIR / ".env"),
         "env_file_encoding": "utf-8"
