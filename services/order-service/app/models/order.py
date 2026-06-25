@@ -32,7 +32,6 @@ class Order(Base):
     remaining  = Column(Integer,    nullable=False)
     status     = Column(String(20), nullable=False, default="new")
 
-    # server_default=func.now() means PostgreSQL sets this automatically
-    # you never need to pass created_at when inserting
+    
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
