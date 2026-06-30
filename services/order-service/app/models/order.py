@@ -26,7 +26,7 @@ class Order(Base):
     symbol     = Column(String(10), nullable=False, index=True)
     side       = Column(String(10), nullable=False)
     type       = Column(String(10), nullable=False)
-    price      = Column(Float,      nullable=True)   # null for market orders
+    price      = Column(Float,      nullable=True)   
     quantity   = Column(Integer,    nullable=False)
     filled     = Column(Integer,    nullable=False, default=0)
     remaining  = Column(Integer,    nullable=False)
